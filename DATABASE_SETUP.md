@@ -10,11 +10,15 @@ El archivo `/database/init.sql` contiene todas las sentencias SQL necesarias par
 - `Rifa` - Tabla de rifas
 
 ### 2. **Script de Inicialización**
-El script `/scripts/init-db.js` ejecuta el SQL del archivo anterior:
-- Se conecta a la base de datos usando la variable `DATABASE_URL`
-- Ejecuta cada sentencia SQL
-- Ignora errores si las tablas ya existen
-- Registra el progreso en consola
+Hay dos scripts disponibles:
+- `/scripts/init-db.js` - Script básico para uso local
+- `/scripts/init-db-safe.js` - Script robusto para Railway con 10 reintentos automáticos
+
+Ambos:
+- Se conectan a la base de datos usando la variable `DATABASE_URL`
+- Ejecutan cada sentencia SQL
+- Ignoran errores si las tablas ya existen
+- Registran el progreso en consola
 
 ### 3. **Cuándo se ejecuta**
 
@@ -26,16 +30,17 @@ npm run db:init          # Usa DATABASE_URL directamente
 
 #### En Build
 ```bash
-npm run build            # Ejecuta: prisma generate + init-db.js + next build
+npm run build            # Ejecuta: prisma generate + next build
 ```
 
 #### En Railway (Producción)
 El archivo `railway.json` está configurado para:
-1. Ejecutar `npm run build` durante el build
-2. Ejecutar `node scripts/init-db.js` antes de iniciar `npm start`
+1. Ejecutar `npm run build` durante el build (sin intentar conectar a BD)
+2. Ejecutar `node scripts/init-db-safe.js` antes de iniciar `npm start`
+3. El script se reintenta automáticamente 10 veces si falla la conexión
 
 ```json
-"startCommand": "node scripts/init-db.js && npm start"
+"startCommand": "node scripts/init-db-safe.js && npm start"
 ```
 
 ## Variables de Entorno Requeridas
@@ -92,7 +97,8 @@ npx prisma generate
 3. **Si falla la conexión:**
    - Verifica que la base de datos está disponible
    - Comprueba que DATABASE_URL es correcta
-   - El script reintentas 5 veces con intervalos de 3 segundos
+   - En Railway: El script `init-db-safe.js` reintenta 10 veces con backoff exponencial (1s -> 5s)
+   - En local: El script `init-db.js` reintenta 5 veces con intervalos de 3 segundos
 
 4. **Si hay error de tablas duplicadas:**
    - Es normal, el script ignora estos errores automáticamente
@@ -118,10 +124,12 @@ project/
 ├── database/
 │   └── init.sql              # Definición de todas las tablas
 ├── scripts/
-│   ├── init-db.js           # Script que ejecuta el SQL
+│   ├── init-db.js           # Script básico que ejecuta el SQL
+│   ├── init-db-safe.js      # Script robusto con reintentos (usado en Railway)
 │   ├── prisma-generate.js   # Genera Prisma Client
 │   ├── post-deploy.sh       # Se ejecuta después de deploy
-│   └── railway-init.sh      # Script específico para Railway
+│   ├── railway-init.sh      # Script específico para Railway
+│   └── test-db-connection.js# Script para verificar conexión
 ├── prisma/
 │   ├── schema.prisma        # Schema de Prisma (optional, solo para queries)
 │   └── migrations/          # Carpeta de migraciones (no se usa)

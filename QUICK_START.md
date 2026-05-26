@@ -30,12 +30,14 @@ npm run dev
 
 1. **Variables de entorno en Railway:**
    - Agregar `DATABASE_URL` con la cadena de conexión MySQL
+   - Asegurar que la BD está disponible antes del deploy
 
 2. **Despliegue automático:**
    ```
    El archivo railway.json ejecutará automáticamente:
-   1. npm run build (crea tablas)
-   2. npm start (inicia la app)
+   1. npm run build (sin intentar conectar a BD)
+   2. node scripts/init-db-safe.js (crea tablas con reintentos automáticos)
+   3. npm start (inicia la app)
    ```
 
 ## ✅ Verificar que las tablas se crearon
@@ -65,9 +67,14 @@ echo "DATABASE_URL=mysql://user:pass@localhost:3306/db" > .env.local
 
 ### Error: "ECONNREFUSED" o "Cannot reach database"
 ```bash
+# En desarrollo local:
 # Verifica que la BD está corriendo en localhost:3306
-# O revisa la URL en .env.local / Railway
+# O revisa la URL en .env.local
 npm run db:test  # Para ver detalles del error
+
+# En Railway:
+# El script init-db-safe.js reintentará automáticamente 10 veces
+# Verifica en los logs de Railway que la conexión se establece
 ```
 
 ### Las tablas no se crean

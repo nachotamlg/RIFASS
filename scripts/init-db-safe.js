@@ -10,7 +10,7 @@ async function initializeDatabase() {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) {
       console.log('[v0] ⚠ DATABASE_URL no configurada, saltando inicialización de BD');
-      process.exit(0);
+      return true;
     }
 
     // Extraer credenciales de DATABASE_URL
@@ -26,10 +26,11 @@ async function initializeDatabase() {
 
     console.log(`[v0] Conectando a ${config.host}:${config.port}/${config.database}`);
 
-    // Crear conexión con reintentos
+    // Crear conexión con reintentos más agresivos
     let connection;
-    let retries = 5;
+    let retries = 10;
     let lastError;
+    let delay = 1000;
 
     while (retries > 0) {
       try {
@@ -41,19 +42,24 @@ async function initializeDatabase() {
         retries--;
         if (retries > 0) {
           console.log(`[v0] ⚠ Reintentando conexión (${retries} intentos restantes)...`);
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay = Math.min(delay * 1.5, 5000); // Backoff exponencial, máx 5s
         }
       }
     }
 
     if (!connection) {
-      throw lastError;
+      console.error('[v0] ✗ No se pudo conectar después de 10 intentos');
+      console.error('[v0] Error:', lastError.message);
+      return false;
     }
 
     // Leer archivo SQL
     const sqlFile = path.join(__dirname, '../database/init.sql');
     if (!fs.existsSync(sqlFile)) {
-      throw new Error(`Archivo SQL no encontrado: ${sqlFile}`);
+      console.error(`[v0] ✗ Archivo SQL no encontrado: ${sqlFile}`);
+      await connection.end();
+      return false;
     }
 
     const sql = fs.readFileSync(sqlFile, 'utf8');
@@ -68,10 +74,11 @@ async function initializeDatabase() {
 
     let successCount = 0;
     let skipCount = 0;
+    let errorCount = 0;
 
     for (const statement of statements) {
       if (statement) {
-        console.log(`[v0] Ejecutando: ${statement.substring(0, 60).replace(/\n/g, ' ')}...`);
+        const preview = statement.substring(0, 50).replace(/\n/g, ' ');
         try {
           await connection.execute(statement);
           successCount++;
@@ -83,26 +90,43 @@ async function initializeDatabase() {
             error.code === 'ER_TABLE_EXISTS_ERROR'
           ) {
             skipCount++;
-            console.log('[v0] → Elemento ya existe, continuando...');
           } else {
-            throw error;
+            errorCount++;
+            console.error(`[v0] ✗ Error en: ${preview}...`);
+            console.error(`[v0]   ${error.message}`);
           }
         }
       }
     }
 
     await connection.end();
+    
+    if (errorCount > 0) {
+      console.warn(`[v0] ⚠ Completado con errores`);
+      console.warn(`[v0]   - Sentencias ejecutadas: ${successCount}`);
+      console.warn(`[v0]   - Elementos existentes: ${skipCount}`);
+      console.warn(`[v0]   - Errores: ${errorCount}`);
+      return false;
+    }
+
     console.log(`[v0] ✓ Base de datos inicializada correctamente`);
     console.log(`[v0]   - Sentencias ejecutadas: ${successCount}`);
     console.log(`[v0]   - Elementos existentes: ${skipCount}`);
-    process.exit(0);
+    return true;
   } catch (error) {
     console.error('[v0] ✗ Error al inicializar la base de datos:', error.message);
     if (process.env.DEBUG) {
       console.error('[v0] Detalles:', error);
     }
-    process.exit(1);
+    return false;
   }
 }
 
-initializeDatabase();
+// Para uso como módulo o como script
+if (require.main === module) {
+  initializeDatabase().then(success => {
+    process.exit(success ? 0 : 1);
+  });
+}
+
+module.exports = { initializeDatabase };
