@@ -9,8 +9,7 @@ async function initializeDatabase() {
     // Parsear DATABASE_URL
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) {
-      console.log('[v0] ⚠ DATABASE_URL no configurada, saltando inicialización de BD');
-      process.exit(0);
+      throw new Error('DATABASE_URL no configurada');
     }
 
     // Extraer credenciales de DATABASE_URL
@@ -29,29 +28,9 @@ async function initializeDatabase() {
 
     console.log(`[v0] Conectando a ${config.host}:${config.port}/${config.database}`);
 
-    // Crear conexión con reintentos
-    let connection;
-    let retries = 3;
-    let lastError;
-
-    while (retries > 0) {
-      try {
-        connection = await mysql.createConnection(config);
-        console.log('[v0] Conexión exitosa a la base de datos');
-        break;
-      } catch (error) {
-        lastError = error;
-        retries--;
-        if (retries > 0) {
-          console.log(`[v0] Reintentando conexión (${retries} intentos restantes)...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-    }
-
-    if (!connection) {
-      throw lastError;
-    }
+    // Crear conexión
+    const connection = await mysql.createConnection(config);
+    console.log('[v0] Conexión exitosa a la base de datos');
 
     // Leer archivo SQL
     const sqlFile = path.join(__dirname, '../database/init.sql');
@@ -66,15 +45,7 @@ async function initializeDatabase() {
     for (const statement of statements) {
       if (statement) {
         console.log(`[v0] Ejecutando: ${statement.substring(0, 50)}...`);
-        try {
-          await connection.execute(statement);
-        } catch (error) {
-          // Ignorar errores si la tabla ya existe
-          if (!error.message.includes('already exists')) {
-            throw error;
-          }
-          console.log('[v0] Tabla ya existe, continuando...');
-        }
+        await connection.execute(statement);
       }
     }
 
@@ -83,6 +54,7 @@ async function initializeDatabase() {
     process.exit(0);
   } catch (error) {
     console.error('[v0] ✗ Error al inicializar la base de datos:', error.message);
+    console.error(error);
     process.exit(1);
   }
 }
