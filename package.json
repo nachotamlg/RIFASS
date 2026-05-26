@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

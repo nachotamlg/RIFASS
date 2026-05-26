@@ -5,6 +5,7 @@
   },
   "deploy": {
     "startCommand": "node scripts/migrate.js && next start",
-    "restartPolicyMaxRetries": 5
+    "restartPolicyMaxRetries": 5,
+    "restartPolicyType": "on_failure"
   }
 }
