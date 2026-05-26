@@ -1,4 +1,4 @@
-const { Client } = require('pg');
+const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 
@@ -13,20 +13,30 @@ async function initializeDatabase() {
       process.exit(0);
     }
 
-    // Crear cliente de PostgreSQL
-    const client = new Client({
-      connectionString: dbUrl,
-    });
+    // Extraer credenciales de DATABASE_URL
+    // Formato: mysql://user:password@host:port/database
+    const urlParts = new URL(dbUrl);
+    const config = {
+      host: urlParts.hostname,
+      port: urlParts.port || 3306,
+      user: urlParts.username,
+      password: urlParts.password,
+      database: urlParts.pathname.slice(1), // Remover el / inicial
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+    };
 
-    console.log('[v0] Conectando a PostgreSQL...');
+    console.log(`[v0] Conectando a ${config.host}:${config.port}/${config.database}`);
 
-    // Conectar con reintentos
+    // Crear conexión con reintentos
+    let connection;
     let retries = 3;
     let lastError;
 
     while (retries > 0) {
       try {
-        await client.connect();
+        connection = await mysql.createConnection(config);
         console.log('[v0] Conexión exitosa a la base de datos');
         break;
       } catch (error) {
@@ -39,7 +49,7 @@ async function initializeDatabase() {
       }
     }
 
-    if (!client) {
+    if (!connection) {
       throw lastError;
     }
 
@@ -57,18 +67,18 @@ async function initializeDatabase() {
       if (statement) {
         console.log(`[v0] Ejecutando: ${statement.substring(0, 50)}...`);
         try {
-          await client.query(statement);
+          await connection.execute(statement);
         } catch (error) {
-          // Ignorar errores si la tabla/índice ya existe
-          if (!error.message.includes('already exists') && !error.message.includes('duplicate')) {
+          // Ignorar errores si la tabla ya existe
+          if (!error.message.includes('already exists')) {
             throw error;
           }
-          console.log('[v0] Tabla/Índice ya existe, continuando...');
+          console.log('[v0] Tabla ya existe, continuando...');
         }
       }
     }
 
-    await client.end();
+    await connection.end();
     console.log('[v0] ✓ Base de datos inicializada correctamente');
     process.exit(0);
   } catch (error) {
