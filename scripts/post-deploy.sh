@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Ejecutando migraciones después del despliegue..."
-npx prisma migrate deploy
+echo "🚀 Inicializando base de datos después del despliegue..."
+node scripts/init-db.js
 
-echo "✅ Migraciones completadas"
+echo "✅ Base de datos inicializada"
