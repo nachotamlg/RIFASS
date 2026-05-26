@@ -4,17 +4,22 @@ Este proyecto está configurado para crear automáticamente las tablas en MySQL 
 
 ## ¿Cómo funciona?
 
-1. **Build Phase**: Next.js se compila normalmente sin conectarse a la base de datos
+1. **Build Phase**: 
+   - Se genera Prisma Client usando `.env.build` (solo necesita un DATABASE_URL dummy)
+   - Next.js se compila normalmente sin conectarse a la base de datos real
 2. **Deploy Phase**: Al iniciar el contenedor, se ejecuta:
-   - `node scripts/init-db.js` - Ejecuta SQL puro para crear las tablas
-   - `npx prisma generate` - Genera el cliente de Prisma
+   - `node scripts/init-db.js` - Se conecta a MySQL usando DATABASE_URL real y ejecuta SQL puro para crear las tablas
    - `next start` - Inicia la aplicación
 
 ## Archivos importantes
 
+- `.env.build` - Environment variables dummy para el build (Prisma generate)
+- `.env.example` - Template de variables de entorno
 - `database/init.sql` - Definición SQL de las tablas (User y Rifa)
-- `scripts/init-db.js` - Script que ejecuta el SQL puro en la base de datos
+- `scripts/init-db.js` - Script que ejecuta el SQL puro en la base de datos en startup
+- `scripts/prisma-generate.js` - Script que genera Prisma Client en el build
 - `railway.json` - Configuración de Railway para el deploy
+- `package.json` - Scripts de build configurados para usar .env.build
 
 ## Paso a paso para configurar en Railway
 
