@@ -64,7 +64,7 @@ export function AuthForm({ type }: AuthFormProps) {
               <Ticket className="h-8 w-8 text-accent-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Rifa Manager</h1>
+          <h1 className="text-3xl font-bold text-foreground">Rifas Pablo</h1>
           <p className="text-sm text-muted-foreground">Gestión moderna de números de rifa</p>
         </div>
 

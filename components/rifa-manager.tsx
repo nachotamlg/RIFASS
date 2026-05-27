@@ -201,7 +201,7 @@ export function RifaManager() {
               <Ticket className="h-6 w-6 text-accent-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Rifa Manager</h1>
+              <h1 className="text-xl font-bold text-foreground">Rifas Pablo</h1>
               <p className="text-xs text-muted-foreground">Sistema de gestión</p>
             </div>
           </div>
@@ -239,7 +239,7 @@ export function RifaManager() {
                     <Input
                       id="number"
                       type="text"
-                      placeholder="RIF-001"
+                      placeholder="002333"
                       value={newNumber}
                       onChange={(e) => setNewNumber(e.target.value)}
                       disabled={isLoading}
